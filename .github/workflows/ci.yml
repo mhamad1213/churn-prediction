@@ -44,3 +44,26 @@ jobs:
 
       - name: Run the tests
         run: python -m pytest -v
+
+
+  docker:
+    needs: test          # only runs if the tests passed
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t churn-api .
+      - name: Start the container
+        run: docker run -d --name churn -p 8000:8000 churn-api
+      - name: Smoke test (health + one prediction)
+        run: |
+          for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 2; done
+          curl -sf localhost:8000/health
+          curl -sf -X POST localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"gender":"Female","SeniorCitizen":"No","Partner":"No","Dependents":"No","tenure":3,"PhoneService":"Yes","MultipleLines":"No","InternetService":"Fiber optic","OnlineSecurity":"No","OnlineBackup":"No","DeviceProtection":"No","TechSupport":"No","StreamingTV":"Yes","StreamingMovies":"No","Contract":"Month-to-month","PaperlessBilling":"Yes","PaymentMethod":"Electronic check","MonthlyCharges":85.0,"TotalCharges":255.0}'
+      - name: Show container logs if anything failed
+        if: failure()
+        run: docker logs churn

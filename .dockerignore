@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ipynb_checkpoints
+.DS_Store
+data
+notebooks
+tests
+models/*.joblib
+reports/figures
