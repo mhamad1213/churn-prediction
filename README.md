@@ -4,6 +4,8 @@
 
 Predicting which telecom customers are about to leave, explaining **why**, and deciding **who to contact**, served as a web app.
 
+**Live demo:** https://churn-prediction-hbcb.onrender.com  (free tier: the first visit after a quiet spell takes about a minute to wake up)
+
 ## Problem
 A subscription business loses revenue every time a customer cancels. If we can rank customers by churn risk, a retention team can contact the riskiest ones first. Success is measured by **churners caught and profit**, not raw accuracy: on this data, predicting "nobody churns" is already 73.5% accurate.
 
@@ -27,6 +29,8 @@ A subscription business loses revenue every time a customer cancels. If we can r
 ## Project structure
 ```
 ├── .github/workflows/ci.yml   # lint, retrain from scratch, test on every push
+├── Dockerfile                 # production image: trains the model at build time, serves the API
+├── requirements-deploy.txt    # slim runtime dependencies (no torch/jupyter)
 ├── data/raw/                  # downloaded CSV (git-ignored)
 ├── models/                    # trained model + threshold (model git-ignored, rebuilt by training)
 ├── notebooks/                 # EDA and feature exploration
@@ -57,6 +61,12 @@ python -m churn.train_baseline && python -m churn.tune && python -m churn.thresh
 python -m pytest
 uvicorn churn.api:app --reload --app-dir src     # then open http://127.0.0.1:8000
 ```
+## Run it with Docker
+```bash
+docker build -t churn-api .
+docker run -p 8000:8000 churn-api                  # then open http://127.0.0.1:8000
+```
+The image downloads the data and trains the model during the build, so the model always matches the library versions it runs with. Deployed on Render from this Dockerfile, redeploying automatically after CI passes on `main`.
 
 ## Roadmap
 - [x] Data validation, EDA, baseline
@@ -65,4 +75,4 @@ uvicorn churn.api:app --reload --app-dir src     # then open http://127.0.0.1:80
 - [x] PyTorch neural network comparison
 - [x] FastAPI service with SHAP explanations
 - [x] GitHub Actions CI
-- [ ] Docker + deploy to Render
+- [x] Docker + deploy to Render
