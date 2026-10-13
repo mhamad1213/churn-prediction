@@ -1,0 +1,42 @@
+[
+  {
+    "strategy":"contact nobody",
+    "threshold":1.01,
+    "flagged":0,
+    "churners_caught":0,
+    "false_alarms":0,
+    "recall":0.0,
+    "precision":0.0,
+    "profit":0.0
+  },
+  {
+    "strategy":"contact everyone",
+    "threshold":0.0,
+    "flagged":1409,
+    "churners_caught":374,
+    "false_alarms":1035,
+    "recall":1.0,
+    "precision":0.2654364798,
+    "profit":5480.0
+  },
+  {
+    "strategy":"default 0.5",
+    "threshold":0.5,
+    "flagged":590,
+    "churners_caught":299,
+    "false_alarms":291,
+    "recall":0.7994652406,
+    "precision":0.506779661,
+    "profit":15110.0
+  },
+  {
+    "strategy":"best 0.43",
+    "threshold":0.43,
+    "flagged":651,
+    "churners_caught":312,
+    "false_alarms":339,
+    "recall":0.8342245989,
+    "precision":0.4792626728,
+    "profit":15060.0
+  }
+]

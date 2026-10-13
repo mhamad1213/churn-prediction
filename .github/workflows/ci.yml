@@ -1,0 +1,46 @@
+# Runs on every push and pull request: rebuild the model from scratch, then lint and test.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # CPU-only PyTorch: much smaller than the default GPU build
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check src tests scripts
+
+      - name: Download the data
+        run: python scripts/download_data.py
+
+      - name: Train the models (baseline -> tuned -> threshold)
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m churn.train_baseline
+          python -m churn.tune
+          python -m churn.threshold
+
+      - name: Run the tests
+        run: python -m pytest -v

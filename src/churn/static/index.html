@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Churn Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1d2330; --muted:#5b6475; --line:#dde1e8;
+          --accent:#6b7a2a; --accent-hover:#55621f; --high:#c0392b; --medium:#d68910; --low:#1e8449; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "American Typewriter", "Courier Prime", "Courier New", serif; background:var(--bg); color:var(--text); }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  p.sub { margin: 0 0 20px; color: var(--muted); }
+  .layout { display:grid; grid-template-columns: 1fr 320px; gap:20px; align-items:start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  form { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:12px; }
+  label { display:flex; flex-direction:column; font-size:.85rem; color:var(--muted); gap:4px; }
+  select, input { font:inherit; color:var(--text); padding:8px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  button { grid-column: 1 / -1; padding:12px; font:inherit; font-weight:600; color:#fff;
+           background:var(--accent); border:0; border-radius:8px; cursor:pointer; }
+  button:hover { background:var(--accent-hover); }
+  .prob { font-size:3rem; font-weight:700; margin:4px 0; }
+  .badge { display:inline-block; padding:4px 10px; border-radius:999px; color:#fff; font-weight:600; font-size:.85rem; }
+  .high { background:var(--high); } .medium { background:var(--medium); } .low { background:var(--low); }
+  ul { padding-left: 18px; } li { margin: 6px 0; }
+  .muted { color:var(--muted); font-size:.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Customer Churn Predictor</h1>
+  <p class="sub">Enter a customer's details to see how likely they are to leave, and why.</p>
+  <div class="layout">
+    <div class="card"><form id="form"></form></div>
+    <div class="card" id="result"><p class="muted">Fill in the form and press Predict.</p></div>
+  </div>
+</main>
+<script>
+const YN = ["No", "Yes"], ADD = ["No", "Yes", "No internet service"];
+const FIELDS = [
+  ["tenure", "Months as a customer", "number", 3],
+  ["MonthlyCharges", "Monthly charges ($)", "number", 85],
+  ["TotalCharges", "Total charges so far ($)", "number", 255],
+  ["Contract", "Contract", ["Month-to-month", "One year", "Two year"]],
+  ["InternetService", "Internet service", ["Fiber optic", "DSL", "No"]],
+  ["PaymentMethod", "Payment method", ["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"]],
+  ["OnlineSecurity", "Online security", ADD], ["TechSupport", "Tech support", ADD],
+  ["OnlineBackup", "Online backup", ADD], ["DeviceProtection", "Device protection", ADD],
+  ["StreamingTV", "Streaming TV", ADD], ["StreamingMovies", "Streaming movies", ADD],
+  ["PhoneService", "Phone service", ["Yes", "No"]],
+  ["MultipleLines", "Multiple lines", ["No", "Yes", "No phone service"]],
+  ["PaperlessBilling", "Paperless billing", ["Yes", "No"]],
+  ["gender", "Gender", ["Female", "Male"]], ["SeniorCitizen", "Senior citizen", YN],
+  ["Partner", "Partner", YN], ["Dependents", "Dependents", YN],
+];
+const form = document.getElementById("form");
+for (const [name, text, type, value] of FIELDS) {
+  const input = Array.isArray(type)
+    ? `<select name="${name}">${type.map(o => `<option>${o}</option>`).join("")}</select>`
+    : `<input name="${name}" type="number" step="any" min="0" value="${value}" required>`;
+  form.insertAdjacentHTML("beforeend", `<label>${text}${input}</label>`);
+}
+form.insertAdjacentHTML("beforeend", "<button type='submit'>Predict</button>");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form));
+  for (const k of ["tenure"]) data[k] = parseInt(data[k], 10);
+  for (const k of ["MonthlyCharges", "TotalCharges"]) data[k] = parseFloat(data[k]);
+  const out = document.getElementById("result");
+  const res = await fetch("/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  if (!res.ok) { out.innerHTML = `<p>Something in the form isn't valid (error ${res.status}).</p>`; return; }
+  const r = await res.json();
+  const reasons = r.top_reasons.length
+    ? r.top_reasons.map(x => `<li><b>${x.feature}</b> = ${x.value}</li>`).join("")
+    : "<li>Nothing stands out as raising the risk.</li>";
+  out.innerHTML = `
+    <div class="muted">Churn probability</div>
+    <div class="prob">${Math.round(r.churn_probability * 100)}%</div>
+    <span class="badge ${r.risk_level}">${r.risk_level} risk</span>
+    <p><b>${r.contact_customer ? "Contact with a retention offer" : "No action needed"}</b>
+       <span class="muted">(threshold ${r.threshold})</span></p>
+    <div class="muted">Biggest reasons for the risk</div>
+    <ul>${reasons}</ul>`;
+});
+</script>
+</body>
+</html>

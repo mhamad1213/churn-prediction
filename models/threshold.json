@@ -1,0 +1,8 @@
+{
+  "threshold": 0.43,
+  "assumptions": {
+    "offer_cost": 20,
+    "customer_value": 300,
+    "offer_success_rate": 0.3
+  }
+}
