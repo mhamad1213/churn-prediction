@@ -20,7 +20,11 @@ COPY scripts/ scripts/
 COPY models/threshold.json models/
 COPY reports/baseline_metrics.json reports/
 
-# 5. Download the data and train the model inside the image
+# 5. Download the data and train the model inside the image.
+#    One thread only: build machines report more CPU cores than they really
+#    give us, and too many threads fighting over one core makes training crawl.
+ENV OMP_NUM_THREADS=1 \
+    LOKY_MAX_CPU_COUNT=1
 RUN python scripts/download_data.py \
     && python -m churn.tune \
     && rm -rf data
