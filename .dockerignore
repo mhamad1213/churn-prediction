@@ -12,3 +12,6 @@ notebooks
 tests
 models/*.joblib
 reports/figures
+mlflow.db
+mlartifacts
+mlruns

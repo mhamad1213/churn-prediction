@@ -3,9 +3,13 @@
 Run locally:   uvicorn churn.api:app --reload --app-dir src
 Then open:     http://127.0.0.1:8000        (the web page)
                http://127.0.0.1:8000/docs   (interactive API docs)
+
+By default the model comes from models/best_model.joblib. Set MODEL_URI to load
+a version from the MLflow registry instead, e.g. MODEL_URI=models:/churn-model@champion
 """
 
 import json
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -81,8 +85,21 @@ class Prediction(BaseModel):
     top_reasons: list[Reason]
 
 
+def load_model():
+    uri = os.environ.get("MODEL_URI")
+    if not uri:
+        return joblib.load(MODELS_DIR / "best_model.joblib"), "models/best_model.joblib"
+    # Only this path needs MLflow, so the Docker image can stay without it
+    import mlflow
+
+    from churn.track import tracking_uri
+
+    mlflow.set_tracking_uri(tracking_uri())
+    return mlflow.sklearn.load_model(uri), uri
+
+
 # Loaded once when the server starts, not on every request
-model = joblib.load(MODELS_DIR / "best_model.joblib")
+model, model_source = load_model()
 threshold = json.loads((MODELS_DIR / "threshold.json").read_text())["threshold"]
 explainer = Explainer(model)
 
@@ -93,6 +110,11 @@ STATIC = Path(__file__).parent / "static"
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/model-info")
+def model_info() -> dict:
+    return {"source": model_source, "threshold": threshold}
 
 
 @app.get("/", include_in_schema=False)

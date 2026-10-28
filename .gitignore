@@ -7,3 +7,6 @@ venv/
 .DS_Store
 data/raw/*.csv
 models/*.joblib
+mlflow.db
+mlartifacts/
+mlruns/

@@ -54,3 +54,9 @@ def test_invalid_input_is_rejected(client):
 
 def test_home_page_is_served(client):
     assert "Churn Predictor" in client.get("/").text
+
+
+def test_model_info_says_where_the_model_came_from(client):
+    body = client.get("/model-info").json()
+    assert body["source"] == "models/best_model.joblib"
+    assert body["threshold"] == 0.43
