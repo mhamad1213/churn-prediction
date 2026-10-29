@@ -10,3 +10,5 @@ models/*.joblib
 mlflow.db
 mlartifacts/
 mlruns/
+predictions.db
+.neon-churn-url

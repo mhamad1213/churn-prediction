@@ -15,3 +15,5 @@ reports/figures
 mlflow.db
 mlartifacts
 mlruns
+predictions.db
+.neon-churn-url

@@ -5,3 +5,5 @@ pandera>=0.20
 fastapi>=0.110
 uvicorn>=0.29
 shap>=0.45
+sqlalchemy>=2.0
+psycopg[binary]>=3.2

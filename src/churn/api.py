@@ -15,13 +15,14 @@ from typing import Literal
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from churn.config import MODELS_DIR
 from churn.data import input_schema
 from churn.explain import Explainer
+from churn.prediction_log import log_prediction, summary
 
 YesNo = Literal["Yes", "No"]
 AddOn = Literal["Yes", "No", "No internet service"]
@@ -117,16 +118,23 @@ def model_info() -> dict:
     return {"source": model_source, "threshold": threshold}
 
 
+@app.get("/monitoring/summary")
+def monitoring_summary() -> dict:
+    return {"model": model_source, **summary()}
+
+
 @app.get("/", include_in_schema=False)
 def home() -> FileResponse:
     return FileResponse(STATIC / "index.html")
 
 
 @app.post("/predict", response_model=Prediction)
-def predict(customer: Customer) -> Prediction:
+def predict(customer: Customer, background_tasks: BackgroundTasks) -> Prediction:
     df = input_schema.validate(pd.DataFrame([customer.model_dump()]))
     prob = float(model.predict_proba(df)[0, 1])
     risk = "high" if prob >= 0.7 else "medium" if prob >= threshold else "low"
+    # saved after the response goes out, so logging never slows the user down
+    background_tasks.add_task(log_prediction, customer.model_dump(), prob, prob >= threshold, model_source)
     return Prediction(
         churn_probability=round(prob, 3),
         contact_customer=prob >= threshold,
