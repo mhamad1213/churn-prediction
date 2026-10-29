@@ -50,7 +50,7 @@ predictions = Table(
 
 
 def database_url() -> str:
-    url = os.environ.get("PREDICTION_DB_URL", f"sqlite:///{ROOT / 'predictions.db'}")
+    url = os.environ.get("PREDICTION_DB_URL") or f"sqlite:///{ROOT / 'predictions.db'}"
     # Neon gives postgresql://...; tell SQLAlchemy to use the psycopg 3 driver
     for prefix in ("postgres://", "postgresql://"):
         if url.startswith(prefix):

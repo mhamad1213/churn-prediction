@@ -1,0 +1,56 @@
+# Track B3: every Monday, check whether live traffic has drifted away from the training data.
+# A red run (and GitHub's email about it) means major drift was found.
+name: Drift check
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"   # Mondays 07:00 UTC
+  workflow_dispatch:       # adds a "Run workflow" button
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-deploy.txt
+
+      - name: Make sure the Neon secret is set
+        env:
+          PREDICTION_DB_URL: ${{ secrets.PREDICTION_DB_URL }}
+        run: |
+          if [ -z "$PREDICTION_DB_URL" ]; then
+            echo "::error::Add the PREDICTION_DB_URL secret (Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+
+      - name: Download the data and rebuild the model
+        env:
+          PYTHONPATH: src
+        run: |
+          python scripts/download_data.py
+          python -m churn.tune
+
+      - name: Check for drift (last 30 days)
+        env:
+          PYTHONPATH: src
+          PREDICTION_DB_URL: ${{ secrets.PREDICTION_DB_URL }}
+        run: python -m churn.drift --days 30 --fail-on-drift
+
+      - name: Save the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-report
+          path: reports/drift/
+          retention-days: 90

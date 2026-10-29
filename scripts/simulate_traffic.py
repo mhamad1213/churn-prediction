@@ -2,6 +2,7 @@
 
     python scripts/simulate_traffic.py                       # your local API
     python scripts/simulate_traffic.py --url https://churn-prediction-hbcb.onrender.com --n 100
+    python scripts/simulate_traffic.py --shift            # customers that have drifted (Track B3)
 """
 
 import argparse
@@ -13,7 +14,23 @@ from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+
 from churn.data import load_data, split_xy  # noqa: E402
+
+
+def shift(customers: pd.DataFrame, seed: int) -> pd.DataFrame:
+    """Pretend the world changed: a 30% price rise, and a promotion that brings in
+    lots of brand-new customers on monthly contracts."""
+    rng = np.random.default_rng(seed)
+    df = customers.copy()
+    df["MonthlyCharges"] = (df["MonthlyCharges"] * 1.3).round(2)
+    new = rng.random(len(df)) < 0.5
+    df.loc[new, "tenure"] = rng.integers(1, 7, new.sum())
+    df.loc[new, "Contract"] = "Month-to-month"
+    df.loc[new, "TotalCharges"] = (df.loc[new, "tenure"] * df.loc[new, "MonthlyCharges"]).round(2)
+    return df
 
 
 def post(url: str, payload: dict) -> dict:
@@ -27,10 +44,14 @@ def main() -> None:
     parser.add_argument("--url", default="http://127.0.0.1:8000")
     parser.add_argument("--n", type=int, default=200, help="how many customers to send")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--shift", action="store_true", help="send drifted customers instead")
     args = parser.parse_args()
 
     X, _ = split_xy(load_data())
-    customers = X.sample(args.n, random_state=args.seed).to_dict(orient="records")
+    sample = X.sample(args.n, random_state=args.seed)
+    if args.shift:
+        sample = shift(sample, args.seed)
+    customers = sample.to_dict(orient="records")
 
     start = time.time()
     contacted = 0

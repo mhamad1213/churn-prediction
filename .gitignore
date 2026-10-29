@@ -7,8 +7,8 @@ venv/
 .DS_Store
 data/raw/*.csv
 models/*.joblib
-mlflow.db
+*.db
 mlartifacts/
 mlruns/
-predictions.db
 .neon-churn-url
+reports/drift/

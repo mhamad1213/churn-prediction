@@ -12,8 +12,7 @@ notebooks
 tests
 models/*.joblib
 reports/figures
-mlflow.db
+*.db
 mlartifacts
 mlruns
-predictions.db
 .neon-churn-url
